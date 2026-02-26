@@ -1,0 +1,7 @@
+# terraform.tfvars.example
+cloud_id  = "b1g..."  # Ваш Cloud ID
+folder_id = "b1g..."  # Ваш Folder ID
+default_zone = "ru-central1-a"
+service_account_key_file = "~/.authorized_key.json"
+subnet_id = "e9b..."  # ID вашей подсети
+public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDA8jQ4FkO... ваш_ключ ... user@host"

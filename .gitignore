@@ -1,0 +1,12 @@
+# Local .terraform directories
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+*.tfvars.json
+!terraform.tfvars.example
+override.tf
+.terraformrc
+terraform.rc
+*.json

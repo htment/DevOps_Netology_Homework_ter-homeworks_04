@@ -1,0 +1,30 @@
+#cloud-config
+users:
+  - name: ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+
+packages:
+  - nginx
+  - curl
+  - wget
+
+package_update: true
+package_upgrade: false
+
+write_files:
+  - content: |
+      <h1>Welcome to ${project_name} VM</h1>
+      <p>Created by Terraform</p>
+      <p>Project: ${project_name}</p>
+    path: /var/www/html/index.html
+    permissions: '0644'
+
+runcmd:
+  - systemctl enable nginx
+  - systemctl start nginx
+  - cp /var/www/html/index.html /var/www/html/index.nginx-debian.html
+
+final_message: "The system is finally up, after $UPTIME seconds"
