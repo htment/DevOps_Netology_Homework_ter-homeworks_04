@@ -193,3 +193,156 @@ terraform import 'module.vpc_dev.yandex_vpc_subnet.this' e9bhn3bnh45nf7cvdv4q
 
 
 ![alt text](image-10.png)
+
+
+# Задание 4
+Измените модуль vpc так, чтобы он мог создать подсети во всех зонах доступности, переданных в переменной типа list(object) при вызове модуля.
+Пример вызова
+```
+module "vpc_prod" {
+  source       = "./vpc"
+  env_name     = "production"
+  subnets = [
+    { zone = "ru-central1-a", cidr = "10.0.1.0/24" },
+    { zone = "ru-central1-b", cidr = "10.0.2.0/24" },
+    { zone = "ru-central1-c", cidr = "10.0.3.0/24" },
+  ]
+}
+
+module "vpc_dev" {
+  source       = "./vpc"
+  env_name     = "develop"
+  subnets = [
+    { zone = "ru-central1-a", cidr = "10.0.1.0/24" },
+  ]
+}
+```
+
+
+
+## соддадим дирректорию 
+будем работать в ней
+```
+mkdir -p 04/04_1
+```
+
+
+добавим в main.tf 
+```
+
+module "vpc_prod" {
+  source   = "./modules/vpc"
+  env_name = "production"
+  subnets = [
+    { zone = "ru-central1-a", cidr = "10.0.1.0/24" },
+    { zone = "ru-central1-b", cidr = "10.0.2.0/24" },
+    { zone = "ru-central1-d", cidr = "10.0.3.0/24" },  # Исправлено: c, не c
+  ]
+}
+
+# Для разработки (одна подсеть)
+module "vpc_dev" {
+  source   = "./modules/vpc"
+  env_name = "develop"
+  subnets = [
+    { zone = "ru-central1-a", cidr = "10.0.1.0/24" },
+  ]
+}
+
+```
+идем в модуль
+```
+./modules/vpc
+```
+задаем  проваейдера versions.tf
+
+```
+
+terraform {
+  required_providers {
+    yandex = {
+      source = "yandex-cloud/yandex"
+    }
+  }
+}
+```
+объявляем переменные сети variables.tf
+```
+variable "env_name" {
+  description = "Name of the environment (e.g., develop, production)"
+  type        = string
+}
+
+variable "subnets" {
+  description = "List of subnets with zones and CIDR blocks"
+  type = list(object({
+    zone = string
+    cidr = string
+  }))
+}
+
+```
+
+Создаем сети main.tf
+```
+# Создаем одну сеть
+resource "yandex_vpc_network" "this" {
+  name = "${var.env_name}-network"
+}
+
+# Создаем подсети динамически, по количеству элементов в var.subnets
+resource "yandex_vpc_subnet" "this" {
+  count = length(var.subnets)
+
+  name           = "${var.env_name}-subnet-${var.subnets[count.index].zone}"
+  zone           = var.subnets[count.index].zone
+  network_id     = yandex_vpc_network.this.id
+  v4_cidr_blocks = [var.subnets[count.index].cidr]
+}
+```
+
+забираем outputs.tf
+
+```
+output "network_id" {
+  description = "ID of the created VPC network"
+  value       = yandex_vpc_network.this.id
+}
+
+output "subnet_ids" {
+  description = "List of IDs of created subnets"
+  value       = yandex_vpc_subnet.this[*].id
+}
+
+# Для обратной совместимости, если нужен ID первой подсети
+output "subnet_id" {
+  description = "ID of the first subnet (for backward compatibility)"
+  value       = try(yandex_vpc_subnet.this[0].id, null)
+}
+```
+
+в основном модуле main.tf создаем  сети для  соответствующих VM
+
+```
+module "vpc_prod" {
+  source   = "./modules/vpc"
+  env_name = "production"
+  subnets = [
+    { zone = "ru-central1-a", cidr = "10.0.1.0/24" },
+    { zone = "ru-central1-b", cidr = "10.0.2.0/24" },
+    { zone = "ru-central1-d", cidr = "10.0.3.0/24" },  
+  ]
+}
+
+# Для разработки (одна подсеть)
+module "vpc_dev" {
+  source   = "./modules/vpc"
+  env_name = "develop"
+  subnets = [
+    { zone = "ru-central1-a", cidr = "10.0.1.0/24" },
+  ]
+}
+
+```
+
+![alt text](image-16.png)
